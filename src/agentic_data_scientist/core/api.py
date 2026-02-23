@@ -15,7 +15,8 @@ from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 from dotenv import load_dotenv
-from google.adk.apps import App, EventsCompactionConfig
+from google.adk.apps import App
+from google.adk.apps.app import EventsCompactionConfig
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
