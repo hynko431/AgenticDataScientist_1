@@ -1,0 +1,74 @@
+
+> frontend@0.1.0 build
+> next build
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+Found 1 warning while optimizing generated CSS:
+
+[2m│   }[22m
+[2m│ }[22m
+[2m│[22m @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Syne:wght@400;500;600;700;800&display=swap');
+[2m┆[22m        [33m[2m^--[22m @import rules must precede all rules aside from @charset and @layer statements[39m
+[2m┆[22m
+[2m│ :root {[22m
+[2m│   --bg-base: #020617;[22m
+
+✓ Compiled successfully in 3.7s
+  Running TypeScript ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/41) ...
+  Generating static pages using 11 workers (10/41) 
+  Generating static pages using 11 workers (20/41) 
+  Generating static pages using 11 workers (30/41) 
+✓ Generating static pages using 11 workers (41/41) in 889.5ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /agents
+├ ○ /agents/architecture
+├ ○ /agents/pipeline
+├ ○ /agents/tools
+├ ○ /dashboard
+├ ○ /docs
+├ ○ /docs/changelog
+├ ○ /docs/notebooks
+├ ○ /history
+├ ○ /history/compare
+├ ○ /insights
+├ ○ /models
+├ ○ /models/comparison
+├ ○ /monitor
+├ ○ /monitor/alerts
+├ ○ /monitor/costs
+├ ○ /monitor/performance
+├ ○ /onboarding
+├ ○ /reports
+├ ○ /review
+├ ƒ /sessions/[id]
+├ ○ /sessions/new/step-1
+├ ○ /sessions/new/step-2
+├ ○ /sessions/new/step-3
+├ ○ /sessions/new/step-4
+├ ○ /sessions/new/step-5
+├ ○ /settings
+├ ○ /settings/api-keys
+├ ○ /settings/billing
+├ ○ /settings/notifications
+├ ○ /settings/profile
+├ ○ /settings/security
+├ ○ /team
+├ ○ /team/audit
+├ ○ /workspace
+├ ○ /workspace/integrations
+├ ○ /workspace/outputs
+└ ○ /workspace/scheduler
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

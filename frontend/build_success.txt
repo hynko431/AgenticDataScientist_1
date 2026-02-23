@@ -1,0 +1,64 @@
+
+> frontend@0.1.0 build
+> next build
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.7s
+  Running TypeScript ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/41) ...
+  Generating static pages using 11 workers (10/41) 
+  Generating static pages using 11 workers (20/41) 
+  Generating static pages using 11 workers (30/41) 
+✓ Generating static pages using 11 workers (41/41) in 666.2ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /agents
+├ ○ /agents/architecture
+├ ○ /agents/pipeline
+├ ○ /agents/tools
+├ ○ /dashboard
+├ ○ /docs
+├ ○ /docs/changelog
+├ ○ /docs/notebooks
+├ ○ /history
+├ ○ /history/compare
+├ ○ /insights
+├ ○ /models
+├ ○ /models/comparison
+├ ○ /monitor
+├ ○ /monitor/alerts
+├ ○ /monitor/costs
+├ ○ /monitor/performance
+├ ○ /onboarding
+├ ○ /reports
+├ ○ /review
+├ ƒ /sessions/[id]
+├ ○ /sessions/new/step-1
+├ ○ /sessions/new/step-2
+├ ○ /sessions/new/step-3
+├ ○ /sessions/new/step-4
+├ ○ /sessions/new/step-5
+├ ○ /settings
+├ ○ /settings/api-keys
+├ ○ /settings/billing
+├ ○ /settings/notifications
+├ ○ /settings/profile
+├ ○ /settings/security
+├ ○ /team
+├ ○ /team/audit
+├ ○ /workspace
+├ ○ /workspace/integrations
+├ ○ /workspace/outputs
+└ ○ /workspace/scheduler
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
