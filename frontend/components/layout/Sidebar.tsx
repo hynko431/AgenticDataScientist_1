@@ -146,7 +146,7 @@ export function Sidebar() {
                         </div>
                         <div>
                             <div className="sidebar-logo-title">Agentic DS</div>
-                            <div className="sidebar-logo-version">v2.4.0-beta</div>
+                            <div className="sidebar-logo-version">v2.6.0-stable</div>
                         </div>
                     </div>
                 </Link>

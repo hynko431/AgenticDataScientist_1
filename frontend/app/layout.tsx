@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { Sidebar } from '@/components/layout/Sidebar';
+import { AppShell } from '@/components/layout/AppShell';
 import { WizardProvider } from '@/lib/WizardContext';
 import { SafeHydration } from '@/components/SafeHydration';
 
@@ -21,10 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body suppressHydrationWarning data-gramm="false" data-lt-active="false">
         <SafeHydration>
           <WizardProvider>
-            <div className="app-shell" suppressHydrationWarning>
-              <Sidebar />
-              <main className="main-content" suppressHydrationWarning>{children}</main>
-            </div>
+            <AppShell>{children}</AppShell>
           </WizardProvider>
         </SafeHydration>
       </body>

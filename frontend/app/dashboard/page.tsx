@@ -57,7 +57,7 @@ export default function DashboardPage() {
                     {/* Stats Row */}
                     <div className="dash-stats-grid">
                         {stats.map((stat) => (
-                            <div key={stat.label} className="stat-card dash-stat-card-custom" data-stat={stat.statKey}>
+                            <div key={stat.label} className={`stat-card dash-stat-card-custom ${stat.statKey === 'Active Sessions' && running > 0 ? 'animate-pulse-glow' : ''}`} data-stat={stat.statKey}>
                                 <div className="dash-stat-bg-icon">
                                     <span className="material-symbols-outlined dash-stat-bg-glyph" data-color={stat.colorKey}>{stat.icon}</span>
                                 </div>

@@ -141,7 +141,7 @@ export default function LandingPage() {
             ))}
           </div>
           <div className="lp-footer-bottom">
-            <p className="lp-footer-copy">© 2024 Agentic Data Systems. All rights reserved.</p>
+            <p className="lp-footer-copy">© 2026 Agentic Data Systems. All rights reserved.</p>
           </div>
         </div>
       </footer>
