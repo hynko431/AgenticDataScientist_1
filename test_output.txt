@@ -1,0 +1,22 @@
+C:\Users\hulkh\anaconda3\en
+vs\AgenticDataScientist\pyt
+hon.exe : C:\Users\hulkh\an
+aconda3\envs\AgenticDataSci
+entist\python.exe: No 
+module named pytest
+At line:1 char:1
++ C:\Users\hulkh\anaconda3\
+envs\AgenticDataScientist\p
+ython.exe -m pyte ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (C:\  
+  Users\hulkh\...le name   
+ d pytest:String) [], R    
+emoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+
