@@ -43,7 +43,7 @@ export default function SearchPage() {
                             </div>
                         ) : (
                             ['Recent Documents', 'Help Center', 'API Guide', 'Model Zoo'].map((topic) => (
-                                <div key={topic} className="glass-card dash-action-card" style={{ cursor: 'default' }}>
+                                <div key={topic} className="glass-card dash-action-card">
                                     <div className="dash-action-badge dash-action-badge-cyan">
                                         <span className="material-symbols-outlined">explore</span>
                                     </div>

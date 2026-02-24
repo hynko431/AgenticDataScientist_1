@@ -7479,43 +7479,50 @@ details>summary::-webkit-details-marker {
 [data-op="max"] {
   --op: 1.0;
 }
- / *     S e a r c h   &   L a n d i n g   P a g e   W r a p p e r     * / 
- . l p - w r a p p e r   { 
-     d i s p l a y :   b l o c k ; 
-     o v e r f l o w - x :   h i d d e n ; 
- } 
- 
- . s e a r c h - c o n t a i n e r   { 
-     p a d d i n g :   4 0 p x ; 
-     b o r d e r - r a d i u s :   1 6 p x ; 
-     m a r g i n - b o t t o m :   3 2 p x ; 
- } 
- 
- . s e a r c h - i n p u t - l a r g e   { 
-     f o n t - s i z e :   1 8 p x   ! i m p o r t a n t ; 
-     p a d d i n g :   1 6 p x   4 8 p x   ! i m p o r t a n t ; 
- } 
- 
- . s e a r c h - r e s u l t s - g r i d   { 
-     d i s p l a y :   g r i d ; 
-     g r i d - t e m p l a t e - c o l u m n s :   r e p e a t ( a u t o - f i l l ,   m i n m a x ( 3 0 0 p x ,   1 f r ) ) ; 
-     g a p :   2 4 p x ; 
- } 
- 
- . s e a r c h - e m p t y - b o x   { 
-     p a d d i n g :   3 2 p x ; 
-     t e x t - a l i g n :   c e n t e r ; 
-     g r i d - c o l u m n :   1   /   - 1 ; 
- } 
- 
- . s e a r c h - e m p t y - i c o n   { 
-     f o n t - s i z e :   4 8 p x   ! i m p o r t a n t ; 
-     c o l o r :   v a r ( - - t e x t - m u t e d ) ; 
- } 
-  
- 
- . s e a r c h - e m p t y - b o x   . d a s h - a c t i o n - t i t l e   { 
-     m a r g i n - t o p :   1 6 p x ; 
- } 
-  
- 
+
+/* ─── Search & Landing Page Wrapper ────────────────────────────────────────── */
+.lp-wrapper {
+  display: block;
+  overflow-x: hidden;
+}
+
+.search-container {
+  padding: 40px;
+  border-radius: 16px;
+  margin-bottom: 32px;
+}
+
+.search-input-large {
+  font-size: 18px !important;
+  padding: 16px 48px !important;
+}
+
+.search-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.search-empty-box {
+  padding: 32px;
+  text-align: center;
+  grid-column: 1 / -1;
+}
+
+.search-empty-icon {
+  font-size: 48px !important;
+  color: var(--text-muted);
+}
+
+.search-empty-box .dash-action-title {
+  margin-top: 16px;
+}
+
+/* ─── Coming Soon ────────────────────────────────────────────────────────────*/
+.coming-soon-inner-wrap {
+  min-height: 60vh;
+}
+
+.coming-soon-icon {
+  font-size: 48px !important;
+}

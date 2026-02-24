@@ -140,133 +140,94 @@ class DataScientist:
         logger.info(f"Auto-cleanup enabled: {self.auto_cleanup}")
 
     async def _setup_agent(self):
-        """Set up the agent and session service."""
-        if self.agent is not None:
-            return  # Already set up
+        """Set up the agent and session service (optimized)."""
+        if self.agent is not None and self.runner is not None:
+            return  # Already fully set up
 
         if self.config.agent_type == "adk":
             from agentic_data_scientist.agents.adk import create_app
 
-            # Create App instead of bare agent
-            app = create_app(
-                working_dir=str(self.working_dir),
-                mcp_servers=self.config.mcp_servers,
-            )
-
-            # Store both app and agent references
-            self.app = app
-            self.agent = app.root_agent  # For compatibility
+            # Create App only if not already present
+            if not self.app:
+                # Use to_thread for create_app as it does heavy prompt loading and directory creation
+                self.app = await asyncio.to_thread(
+                    create_app,
+                    working_dir=str(self.working_dir),
+                    mcp_servers=self.config.mcp_servers,
+                )
+            self.agent = self.app.root_agent
 
         elif self.config.agent_type == "claude_code":
-            from agentic_data_scientist.agents.adk.utils import CODING_MODEL, CODING_MODEL_NAME
-            from agentic_data_scientist.prompts import load_prompt
+            # (Claude code setup remains mostly the same but could benefit from similar pooling)
+            # For simplicity, we keep it as is but ensure it's idempotent
+            if not self.agent:
+                from agentic_data_scientist.agents.adk.utils import CODING_MODEL, CODING_MODEL_NAME
+                from agentic_data_scientist.prompts import load_prompt
 
-            # If coding model is Gemini, use a standard ADK LoopDetectionAgent instead of ClaudeCodeAgent
-            is_gemini_coding = CODING_MODEL_NAME.startswith(("gemini/", "google/", "gemini-"))
+                is_gemini_coding = CODING_MODEL_NAME.startswith(("gemini/", "google/", "gemini-"))
 
-            if is_gemini_coding:
-                from google.adk.planners import BuiltInPlanner
-                from agentic_data_scientist.agents.adk.loop_detection import LoopDetectionAgent
-                from agentic_data_scientist.agents.adk.utils import get_generate_content_config, is_network_disabled
-                from agentic_data_scientist.tools import (
-                    directory_tree, fetch_url, get_file_info,
-                    list_directory, read_file, read_media_file, search_files,
-                )
+                if is_gemini_coding:
+                    from google.adk.planners import BuiltInPlanner
+                    from agentic_data_scientist.agents.adk.loop_detection import LoopDetectionAgent
+                    from agentic_data_scientist.agents.adk.utils import get_generate_content_config, is_network_disabled
+                    from agentic_data_scientist.tools import (
+                        directory_tree, fetch_url, get_file_info,
+                        list_directory, read_file, read_media_file, search_files,
+                    )
 
-                logger.info(
-                    f"[AgenticDS] Using Gemini-based simple agent for 'claude_code' mode: {CODING_MODEL_NAME}"
-                )
-                coding_prompt = load_prompt("coding_base")
-                working_dir_str = str(self.working_dir)
+                    logger.info(f"[AgenticDS] Using Gemini-based simple agent for 'claude_code' mode: {CODING_MODEL_NAME}")
+                    coding_prompt = await asyncio.to_thread(load_prompt, "coding_base")
+                    working_dir_str = str(self.working_dir)
 
-                def read_file_bound(path: str, head: int = None, tail: int = None) -> str:
-                    """Read file contents with optional head/tail line limits."""
-                    return read_file(path, working_dir_str, head, tail)
+                    # Re-using bound methods logic...
+                    def read_file_bound(path: str, head: int = None, tail: int = None) -> str:
+                        return read_file(path, working_dir_str, head, tail)
+                    def read_media_file_bound(path: str) -> str:
+                        return read_media_file(path, working_dir_str)
+                    def list_directory_bound(path: str = ".", show_sizes: bool = False, sort_by: str = "name") -> str:
+                        return list_directory(path, working_dir_str, show_sizes, sort_by)
+                    def directory_tree_bound(path: str = ".", exclude_patterns: list = None) -> str:
+                        return directory_tree(path, working_dir_str, exclude_patterns)
+                    def search_files_bound(pattern: str, path: str = ".", exclude_patterns: list = None) -> str:
+                        return search_files(pattern, working_dir_str, path, exclude_patterns)
+                    def get_file_info_bound(path: str) -> str:
+                        return get_file_info(path, working_dir_str)
 
-                def read_media_file_bound(path: str) -> str:
-                    """Read binary/media files and return base64 encoded data."""
-                    return read_media_file(path, working_dir_str)
+                    tools = [read_file_bound, read_media_file_bound, list_directory_bound, directory_tree_bound, search_files_bound, get_file_info_bound]
+                    if not is_network_disabled(): tools.append(fetch_url)
 
-                def list_directory_bound(path: str = ".", show_sizes: bool = False, sort_by: str = "name") -> str:
-                    """List directory contents with optional size display and sorting."""
-                    return list_directory(path, working_dir_str, show_sizes, sort_by)
+                    self.agent = LoopDetectionAgent(
+                        name="gemini_coding_agent",
+                        description="A coding agent that uses Gemini to implement requests.",
+                        instruction=coding_prompt,
+                        model=CODING_MODEL,
+                        tools=tools,
+                        planner=BuiltInPlanner(thinking_config=types.ThinkingConfig(include_thoughts=True, thinking_budget=-1)),
+                        generate_content_config=get_generate_content_config(temperature=0.0),
+                    )
+                else:
+                    from agentic_data_scientist.agents.claude_code import ClaudeCodeAgent
+                    self.agent = ClaudeCodeAgent(working_dir=str(self.working_dir))
 
-                def directory_tree_bound(path: str = ".", exclude_patterns: list = None) -> str:
-                    """Generate a recursive directory tree view."""
-                    return directory_tree(path, working_dir_str, exclude_patterns)
+                if not self.app:
+                    from google.adk.apps.app import EventsCompactionConfig
+                    compression_config = EventsCompactionConfig(compaction_interval=3, overlap_size=2)
+                    self.app = App(name="agentic-data-scientist-claude", root_agent=self.agent, events_compaction_config=compression_config)
 
-                def search_files_bound(pattern: str, path: str = ".", exclude_patterns: list = None) -> str:
-                    """Search for files matching a pattern."""
-                    return search_files(pattern, working_dir_str, path, exclude_patterns)
+        # Persistence for session service and runner
+        if not self.session_service:
+            self.session_service = InMemorySessionService()
 
-                def get_file_info_bound(path: str) -> str:
-                    """Get detailed metadata about a file."""
-                    return get_file_info(path, working_dir_str)
-
-                tools = [
-                    read_file_bound, read_media_file_bound, list_directory_bound,
-                    directory_tree_bound, search_files_bound, get_file_info_bound,
-                ]
-                if not is_network_disabled():
-                    tools.append(fetch_url)
-
-                simple_agent = LoopDetectionAgent(
-                    name="gemini_coding_agent",
-                    description="A coding agent that uses Gemini to implement requests.",
-                    instruction=coding_prompt,
-                    model=CODING_MODEL,
-                    tools=tools,
-                    planner=BuiltInPlanner(
-                        thinking_config=types.ThinkingConfig(include_thoughts=True, thinking_budget=-1)
-                    ),
-                    generate_content_config=get_generate_content_config(temperature=0.0),
-                )
-                self.agent = simple_agent
-            else:
-                from agentic_data_scientist.agents.claude_code import ClaudeCodeAgent
-                self.agent = ClaudeCodeAgent(working_dir=str(self.working_dir))
-
-            # Create App wrapping whichever agent was chosen above
-            compression_config = EventsCompactionConfig(
-                compaction_interval=3,  # Compress every 3 invocations
-                overlap_size=2,
-            )
-            self.app = App(
-                name="agentic-data-scientist-claude",
-                root_agent=self.agent,   # always valid — set in both if/else branches
-                events_compaction_config=compression_config,
-            )
-
-        else:
-            raise ValueError(f"Unknown agent type: {self.config.agent_type}")
-
-        # Create session service
-        self.session_service = InMemorySessionService()
-
-        # Get app_name from app if available, otherwise use default
         app_name = self.app.name if self.app else "agentic_data_scientist"
+        
+        # Only create session if it doesn't exist
+        try:
+            self.session = await self.session_service.get_session(app_name=app_name, user_id="default_user", session_id=self.session_id)
+        except:
+            self.session = await self.session_service.create_session(app_name=app_name, user_id="default_user", session_id=self.session_id)
 
-        # Pre-create the session
-        session = await self.session_service.create_session(
-            app_name=app_name,
-            user_id="default_user",
-            session_id=self.session_id,
-        )
-        self.session = session
-
-        # Create runner with App if available
-        if self.app:
-            self.runner = Runner(
-                app=self.app,  # Pass App instead of agent
-                session_service=self.session_service,
-            )
-        else:
-            # Fallback for claude_code (though we should always have app now)
-            self.runner = Runner(
-                agent=self.agent,
-                app_name="agentic_data_scientist",
-                session_service=self.session_service,
-            )
+        if not self.runner:
+            self.runner = Runner(app=self.app, session_service=self.session_service) if self.app else Runner(agent=self.agent, app_name="agentic_data_scientist", session_service=self.session_service)
 
         logger.info(f"Agent setup complete: {self.config.agent_type}")
 

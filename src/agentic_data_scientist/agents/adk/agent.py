@@ -137,10 +137,28 @@ def plan_parser_callback(callback_context: CallbackContext):
         logger.error("[PlanParser] No parsed output found in state")
         return
 
-    # Validate structure
+    # Validate structure and handle raw strings
     if not isinstance(parsed_output, dict):
-        logger.error(f"[PlanParser] Invalid parsed output type: {type(parsed_output)}")
-        return
+        if isinstance(parsed_output, str):
+            logger.info("[PlanParser] Output is a string, attempting JSON extraction")
+            import json
+            import re
+            
+            # Try to find JSON block
+            json_match = re.search(r"(\{.*\}|\[.*\])", parsed_output, re.DOTALL)
+            if json_match:
+                try:
+                    parsed_output = json.loads(json_match.group(1))
+                    logger.info("[PlanParser] Successfully extracted JSON from string")
+                except json.JSONDecodeError:
+                    logger.error("[PlanParser] Failed to decode extracted JSON string")
+                    return
+            else:
+                logger.error("[PlanParser] No JSON-like structure found in output string")
+                return
+        else:
+            logger.error(f"[PlanParser] Invalid parsed output type: {type(parsed_output)}")
+            return
 
     stages_data = parsed_output.get("stages", [])
     criteria_data = parsed_output.get("success_criteria", [])

@@ -17,6 +17,7 @@ import logging
 import os
 import sys
 import shutil
+import time
 from pathlib import Path
 from typing import List, Optional
 
@@ -55,6 +56,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def add_process_time_header(request, call_next):
+    start_time = time.perf_counter()
+    response = await call_next(request)
+    process_time = time.perf_counter() - start_time
+    logger.info(f"LATENCY: {request.method} {request.url.path} - {process_time:.4f}s")
+    response.headers["X-Process-Time"] = str(process_time)
+    return response
 
 # ── Working-dir root ──────────────────────────────────────────────────────────
 OUTPUT_ROOT = _project_root / "agentic_output"
@@ -139,26 +149,30 @@ def _session_to_summary(record) -> SessionSummary:
 
 
 def _file_tree(directory: Path, base: Path) -> list:
-    """Recursive file tree as list of dicts."""
+    """Efficient recursive file tree as list of dicts using os.scandir."""
     entries = []
     try:
-        for item in sorted(directory.iterdir()):
-            rel = str(item.relative_to(base))
-            if item.is_dir():
-                entries.append({
-                    "name": item.name,
-                    "path": rel,
-                    "type": "directory",
-                    "children": _file_tree(item, base),
-                })
-            else:
-                entries.append({
-                    "name": item.name,
-                    "path": rel,
-                    "type": "file",
-                    "size": item.stat().st_size,
-                })
-    except PermissionError:
+        # os.scandir is faster as it gets file attributes in one syscall 
+        with os.scandir(directory) as it:
+            for entry in it:
+                rel = str(Path(entry.path).relative_to(base))
+                if entry.is_dir():
+                    entries.append({
+                        "name": entry.name,
+                        "path": rel,
+                        "type": "directory",
+                        "children": _file_tree(Path(entry.path), base),
+                    })
+                else:
+                    entries.append({
+                        "name": entry.name,
+                        "path": rel,
+                        "type": "file",
+                        "size": entry.stat().st_size,
+                    })
+        # Sort results for consistent UI presentation
+        entries.sort(key=lambda x: (x["type"] != "directory", x["name"].lower()))
+    except (PermissionError, FileNotFoundError):
         pass
     return entries
 
@@ -277,16 +291,38 @@ async def stream_events(session_id: str):
     )
 
 
+# ── Caching for file trees ───────────────────────────────────────────────────
+_file_tree_cache = {}
+_CACHE_TTL = 2.0  # seconds
+
 @app.get("/api/sessions/{session_id}/files")
 async def list_files(session_id: str):
-    """Return a recursive file tree for the session's working directory."""
+    """Return a recursive file tree for the session's working directory (optimized)."""
     record = store.get(session_id)
     if not record:
         raise HTTPException(status_code=404, detail="Session not found.")
+    
     wd = Path(record.working_dir)
     if not wd.exists():
         return []
-    return _file_tree(wd, wd)
+
+    # Simple cache check based on mtime of the base directory
+    mtime = wd.stat().st_mtime
+    cache_key = f"{session_id}_{mtime}"
+    
+    if cache_key in _file_tree_cache:
+        return _file_tree_cache[cache_key]
+
+    # Run blocking file I/O in a thread to keep the event loop free
+    tree = await asyncio.to_thread(_file_tree, wd, wd)
+    
+    # Cache the result
+    _file_tree_cache[cache_key] = tree
+    # Basic cache cleanup: keep only latest 50 results
+    if len(_file_tree_cache) > 50:
+        _file_tree_cache.pop(next(iter(_file_tree_cache)))
+        
+    return tree
 
 
 @app.get("/api/sessions/{session_id}/files/{file_path:path}")

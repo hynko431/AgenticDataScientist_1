@@ -45,12 +45,23 @@ async function listSessions() {
     if (!res.ok) throw new Error('Failed to list sessions');
     return res.json();
 }
+const sessionCache = {};
+const CACHE_TTL = 3000; // 3 seconds
 async function getSession(id) {
+    const now = Date.now();
+    if (sessionCache[id] && now - sessionCache[id].timestamp < CACHE_TTL) {
+        return sessionCache[id].data;
+    }
     const res = await fetch(`${BASE}/api/sessions/${id}`, {
         cache: 'no-store'
     });
     if (!res.ok) throw new Error('Session not found');
-    return res.json();
+    const data = await res.json();
+    sessionCache[id] = {
+        data,
+        timestamp: now
+    };
+    return data;
 }
 async function deleteSession(id) {
     await fetch(`${BASE}/api/sessions/${id}`, {

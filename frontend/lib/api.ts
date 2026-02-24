@@ -33,10 +33,21 @@ export async function listSessions(): Promise<SessionSummary[]> {
     return res.json();
 }
 
+const sessionCache: Record<string, { data: SessionSummary; timestamp: number }> = {};
+const CACHE_TTL = 3000; // 3 seconds
+
 export async function getSession(id: string): Promise<SessionSummary> {
+    const now = Date.now();
+    if (sessionCache[id] && now - sessionCache[id].timestamp < CACHE_TTL) {
+        return sessionCache[id].data;
+    }
+
     const res = await fetch(`${BASE}/api/sessions/${id}`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Session not found');
-    return res.json();
+
+    const data = await res.json();
+    sessionCache[id] = { data, timestamp: now };
+    return data;
 }
 
 export async function deleteSession(id: string): Promise<void> {

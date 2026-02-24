@@ -139,9 +139,15 @@ class StageOrchestratorAgent(BaseAgent):
             state["current_stage_index"] = 0
         if "stage_implementations" not in state:
             state["stage_implementations"] = []
+        if "stage_failure_counts" not in state:
+            state["stage_failure_counts"] = {}
 
-        # Get stages and criteria from state
-        stages: List[Dict] = state.get("high_level_stages", [])
+        # Import utilities
+        from agentic_data_scientist.agents.adk.orchestration_utils import normalize_stages
+
+        # Get and normalize stages/criteria from state
+        stages: List[Dict] = normalize_stages(state.get("high_level_stages", []))
+        state["high_level_stages"] = stages
         criteria: List[Dict] = state.get("high_level_success_criteria", [])
 
         # Validate stages
@@ -243,14 +249,16 @@ class StageOrchestratorAgent(BaseAgent):
 
         # Main orchestration loop
         iteration = 0
-        max_iterations = 50  # Safety limit to prevent infinite loops
+        max_iterations = 50  # Global safety limit
+        max_stage_retries = 3 # Limit per specific stage
 
         while iteration < max_iterations:
             iteration += 1
             logger.info(f"[StageOrchestrator] === Orchestration iteration {iteration} ===")
 
-            # Refresh state objects (they may have been modified by callbacks)
-            stages = state.get("high_level_stages", [])
+            # Refresh and NORMALIZE stages/criteria
+            stages = normalize_stages(state.get("high_level_stages", []))
+            state["high_level_stages"] = stages
             criteria = state.get("high_level_success_criteria", [])
 
             # Check exit condition: all criteria met?
@@ -318,6 +326,16 @@ class StageOrchestratorAgent(BaseAgent):
             next_stage = remaining_stages[0]
             stage_idx = next_stage["index"]
 
+            # Check per-stage retry limit
+            failure_count = state["stage_failure_counts"].get(str(stage_idx), 0)
+            if failure_count >= max_stage_retries:
+                logger.error(f"[StageOrchestrator] Stage {stage_idx} failed {failure_count} times. Skipping to prevent loop.")
+                yield Event(author=self.name, content=types.Content(role="model", parts=[types.Part(text=f"\n\n⚠️ Skipping stage {stage_idx + 1} ('{next_stage['title']}') after {failure_count} failures to avoid infinite loop.\n\n")]), turn_complete=False)
+                # Mark as completed to skip it
+                next_stage["completed"] = True
+                state["high_level_stages"] = stages
+                continue
+
             logger.info(f"[StageOrchestrator] 📍 Starting stage {stage_idx}: {next_stage['title']}")
 
             # Create stage start event
@@ -372,26 +390,11 @@ class StageOrchestratorAgent(BaseAgent):
                     logger.warning(f"[StageOrchestrator] Manual compression failed: {compress_err}")
 
             except Exception as e:
-                logger.error(
-                    f"[StageOrchestrator] Implementation loop failed for stage {stage_idx}: {e}",
-                    exc_info=True,
-                )
-                error_event = Event(
-                    author=self.name,
-                    content=types.Content(
-                        role="model",
-                        parts=[
-                            types.Part(
-                                text=f"\n\n❌ Implementation loop failed for stage {stage_idx} "
-                                f"({next_stage['title']}): {str(e)}\n\n"
-                                "Skipping to next stage...\n\n"
-                            )
-                        ],
-                    ),
-                    turn_complete=True,
-                )
+                logger.error(f"[StageOrchestrator] Implementation loop failed for stage {stage_idx}: {e}", exc_info=True)
+                # Increment failure count
+                state["stage_failure_counts"][str(stage_idx)] = failure_count + 1
+                error_event = Event(author=self.name, content=types.Content(role="model", parts=[types.Part(text=f"\n\n❌ Stage {stage_idx + 1} failed: {str(e)}\n\n")]), turn_complete=False)
                 yield error_event
-                # Skip this stage and continue to next
                 continue
 
             # Store implementation result (but don't mark as completed yet)
@@ -483,22 +486,11 @@ class StageOrchestratorAgent(BaseAgent):
                 stages = state.get("high_level_stages", [])
 
             # NOW mark stage as completed (after criteria check and reflection)
-            # CRITICAL FIX: Refresh stages from state and find the correct stage to mark complete
-            # The stage_reflector may have modified stages, so next_stage reference could be stale
-            stages = state.get("high_level_stages", [])
-
-            # Find the stage by index to ensure we're marking the right one complete
-            stage_found = False
+            stages = normalize_stages(state.get("high_level_stages", []))
             for stage in stages:
                 if stage.get("index") == stage_idx:
                     stage["completed"] = True
-                    stage_found = True
                     break
-
-            if not stage_found:
-                logger.warning(f"[StageOrchestrator] Could not find stage {stage_idx} to mark complete")
-
-            # Update stages in state
             state["high_level_stages"] = stages
 
             logger.info(f"[StageOrchestrator] Stage {stage_idx} cycle complete. Continuing to next iteration.")
